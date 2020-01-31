@@ -1,5 +1,5 @@
 #!/usr/env/python
-# import argparse
+import argparse
 import xarray as xr
 import numpy as np
 import os
@@ -16,7 +16,7 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     #
     # Maybe someone can show me how to use Python doc strings?
     #   This routine takes a single background sounding extracted from the Garand atmospheres distributed with RTE+RRTMGP
-    #   and pastes it above a sounding file following the "QC netcdf" conventions from the Apsen software 
+    #   and pastes it above a sounding file following the "QC netcdf" conventions from the Apsen software
     #
     #
     # Background sounding
@@ -71,6 +71,8 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     ch4  = back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_ch4.interp(p_lay=play).fillna(back.vmr_ch4.isel(lay=lowest))
     n2o  = back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_n2o.interp(p_lay=play).fillna(back.vmr_n2o.isel(lay=lowest))
 
+    if(mu0 <= 0): mu0 = 1. # replace with computation from sonde date, time, lat/lon
+
     profile = xr.Dataset({"tlay"   :(["play"], temp), \
                           "play"   :(["play"], play), \
                           "vmr_h2o":(["play"], h2o),  \
@@ -97,14 +99,28 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
 
 # argparse variables: sonde_file, background_sounding_file, delta_p
 # values when run in repo root
-sonde_file      = 'input/HALO/20200119/AVAPS_Dropsondes/processed/D20200119_161410_PQC.nc'
-background_file = 'tropical-atmosphere.nc'
-output_dir      = '.'
-output_file     = os.path.basename(sonde_file)[:-3] + "_rad.nc"
-deltaP   = 100  # Pressure thickness of interpolated sonde layers, Pa
-sfc_emis = .98  # Surface longwave emissivity - approriate for ocean
-sfc_alb  = 0.07 # Surface albedo - appropriate for ocean surface
-mu0      = 1.   # Cosine of solar zenith angle - we'll get this from lat/lon and time
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Builds a netCDF file suitable for computing radiative fluxes by merging a background sounding a sonde file from Aspen")
+    parser.add_argument("--sonde_file", type=str, default="input/HALO/20200119/AVAPS_Dropsondes/processed/D20200119_161410_PQC.nc",
+                        help="Name of sonde file")
+    parser.add_argument("--background_file", type=str, default='tropical-atmosphere.nc',
+                        help="Directory where reference values are")
+    parser.add_argument("--deltaP", type=int, default=100,
+                        help="Pressure discretization of sonde (Pa, integer)")
+    parser.add_argument("--sfc_emissivity", type=float, default=0.98, dest="emis",
+                        help="Surface emissivity (spectrally constant)")
+    parser.add_argument("--sfc_albedo", type=float, default=0.07, dest="alb",
+                        help="Surface albedo (spectrally constant, same for direct and diffuse)")
+    parser.add_argument("--cos_sza", type=float, default=0, dest="mu0",
+                        help="Cosine of solar zenith angle, default is to compute from sonde file (someday)")
+    args = parser.parse_args()
 
-profile = combine_sonde_and_background(sonde_file, background_file, deltaP=deltaP, sfc_emis=sfc_emis, sfc_alb=sfc_alb, mu0=mu0)
-profile.to_netcdf(os.path.join(output_dir, output_file))
+    # Generalize this
+    output_dir      = '.'
+    output_file     = os.path.basename(args.sonde_file)[:-3] + "_rad.nc"
+
+    # Any error checking on arguments? 
+
+    profile = combine_sonde_and_background(args.sonde_file, args.background_file, \
+                                           deltaP=args.deltaP, sfc_emis=args.emis, sfc_alb=args.alb, mu0=args.mu0)
+    profile.to_netcdf(os.path.join(output_dir, output_file))
