@@ -11,8 +11,9 @@ PaTohPa = 100.
 epsilon = 0.6223 # Ratio of molar mass of water to dry air
 CtoK    = 273.15 # Celsius to Kelvin
 gtokg   = 1.e-3
+ghgs    = ["co2", "ch4", "n2o", "o3", "o2", "n2", "co"]
 
-def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_emis=.98, sfc_alb=0.07,mu0=1.):
+def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_emis=.98, sfc_alb=0.07, mu0=1., ghgs=ghgs):
     #
     # Maybe someone can show me how to use Python doc strings?
     #   This routine takes a single background sounding extracted from the Garand atmospheres distributed with RTE+RRTMGP
@@ -23,8 +24,9 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     #
     back = xr.open_dataset(background_file)
     #
-    # Parse the sondes, dropping levels at which any of
+    # Parse the sonde, dropping levels at which any of
     #    temperature, water vapor mass mixing ratio, pressure, or altitude are missing
+    #    and making pressure the coordinate
     #
     sonde = xr.open_dataset(sonde_file).dropna(dim='time',subset=['time']). \
                                         swap_dims({'time':'pres'}).reset_coords(). \
@@ -44,7 +46,6 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     # Layer pressures from background sounding in increasing order
     back_plays  = np.sort(back.p_lay.where(back.p_lay < play_switch).dropna(dim='lay'))
     sonde_plays = np.arange(play_switch, sonde.pres.max(), deltaP)
-    nback       = back_plays.size
     play = np.append(back_plays, sonde_plays)
     #
     # Interface pressures: mostly the average of the two neighboring layer pressures
@@ -62,27 +63,11 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     # Index with the greatest pressure - where pressures in the sonde are higher than any in the background, use the
     #   value from the highest pressure/lowest level
     #
-    lowest = back.p_lay.argmax()
-    o3   = back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_o3.interp(p_lay=play).fillna(back.vmr_o3.isel(lay=lowest))
-    n2   = back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_n2.interp(p_lay=play).fillna(back.vmr_n2.isel(lay=lowest))
-    o2   = back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_o2.interp(p_lay=play).fillna(back.vmr_o2.isel(lay=lowest))
-    co   = back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_co.interp(p_lay=play).fillna(back.vmr_co.isel(lay=lowest))
-    co2  = back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_co2.interp(p_lay=play).fillna(back.vmr_co2.isel(lay=lowest))
-    ch4  = back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_ch4.interp(p_lay=play).fillna(back.vmr_ch4.isel(lay=lowest))
-    n2o  = back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_n2o.interp(p_lay=play).fillna(back.vmr_n2o.isel(lay=lowest))
-
     if(mu0 <= 0): mu0 = 1. # replace with computation from sonde date, time, lat/lon
 
     profile = xr.Dataset({"tlay"   :(["play"], temp), \
                           "play"   :(["play"], play), \
                           "vmr_h2o":(["play"], h2o),  \
-                          "vmr_co2":(["play"], co2),  \
-                          "vmr_ch4":(["play"], ch4),  \
-                          "vmr_n2o":(["play"], n2o),  \
-                          "vmr_o2" :(["play"], o2 ),  \
-                          "vmr_o3" :(["play"], o3 ),  \
-                          "vmr_n2" :(["play"], n2 ),  \
-                          "vmr_co" :(["play"], co),   \
                           "plev"   :(["plev"], plev), \
                           "sfc_emis":([], sfc_emis),  \
                           "sfc_alb":([], sfc_alb ),  \
@@ -93,6 +78,14 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
                           "sw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
                           "sw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\
                           "sw_net" :(["plev"], np.repeat(np.nan, plev.size))})
+    #
+    # Add the other greenhouse gases
+    #
+    lowest = back.p_lay.argmax()
+    back_on_p = back.swap_dims({'lay':'p_lay'}).reset_coords() # Background sounding on pressure layers
+    for g in ghgs:
+        profile[g] = back_on_p["vmr_" + g].interp(p_lay=play).fillna(back["vmr_" + g].isel(lay=lowest))
+
     back.close()
     sonde.close()
     return(profile)
@@ -119,7 +112,7 @@ if __name__ == '__main__':
     output_dir      = '.'
     output_file     = os.path.basename(args.sonde_file)[:-3] + "_rad.nc"
 
-    # Any error checking on arguments? 
+    # Any error checking on arguments?
 
     profile = combine_sonde_and_background(args.sonde_file, args.background_file, \
                                            deltaP=args.deltaP, sfc_emis=args.emis, sfc_alb=args.alb, mu0=args.mu0)
