@@ -13,6 +13,10 @@ CtoK    = 273.15 # Celsius to Kelvin
 gtokg   = 1.e-3
 ghgs    = ["co2", "ch4", "n2o", "o3", "o2", "n2", "co"]
 
+#
+# Need to add surface temperature for LW
+#
+
 def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_emis=.98, sfc_alb=0.07, mu0=1., ghgs=ghgs):
     #
     # Maybe someone can show me how to use Python doc strings?
