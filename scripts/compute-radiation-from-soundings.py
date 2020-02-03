@@ -1,4 +1,6 @@
 #!/usr/env/python
+from pysolar.solar import *
+import datetime
 import argparse
 import xarray as xr
 import numpy as np
@@ -41,7 +43,7 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     sonde["pres"] = sonde.pres * PaTohPa       # hPa to Pa
     sonde["mr"]   = sonde.mr * gtokg / epsilon # Mass to volume mixing ratio
     sonde["tdry"] = sonde.tdry + CtoK          # C to K
-
+    
     #
     # Construct pressure grid: coarse where we have only the background sounding, changing abruptly to
     #   the a grid from min to max pressure of the sondes.
@@ -67,7 +69,19 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     # Index with the greatest pressure - where pressures in the sonde are higher than any in the background, use the
     #   value from the highest pressure/lowest level
     #
-    if(mu0 <= 0): mu0 = 1. # replace with computation from sonde date, time, lat/lon
+
+    
+    date = datetime.datetime.strptime(str(sonde.time.values[0]).split('.')[0],'%Y-%m-%dT%H:%M:%S')
+    alt_sol = get_altitude(lat,lon, date)
+    cos_sza = np.sin(alt_sol*np.pi/180)  
+
+    if(mu0 <= 0): 
+        mu0 = 1.
+    else:
+        mu0 = cos_sza
+    
+    sfc_t = sonde.tdry.values[0]
+# replace with computation from sonde date, time, lat/lon
 
     profile = xr.Dataset({"tlay"   :(["play"], temp), \
                           "play"   :(["play"], play), \
@@ -75,6 +89,7 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
                           "plev"   :(["plev"], plev), \
                           "sfc_emis":([], sfc_emis),  \
                           "sfc_alb":([], sfc_alb ),  \
+                          "sfc_t":([], sfc_t),  \
                           "cos_sza":([], mu0),       \
                           "lw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
                           "lw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\

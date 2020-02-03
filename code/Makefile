@@ -1,3 +1,10 @@
+
+ifeq ($(USER),bfildier)
+	RRTMGP_ROOT = ../../rte-rrtmgp
+	NFHOME = /usr/local
+	NCHOME = /usr/local
+endif
+
 # Location of RTE+RRTMGP libraries, module files.
 RRTMGP_BUILD = $(RRTMGP_ROOT)/build
 # Sets macros FC, FCFLAGS consistent with RTE+RRTMGP
@@ -5,6 +12,9 @@ RRTMGP_BUILD = $(RRTMGP_ROOT)/build
 
 # Location of netcdf C and Fortran libraries. Could specify with environment variables if file doesn't exist
 -include $(RRTMGP_ROOT)/examples/rfmip-clear-sky/Makefile.libs
+
+-include 
+
 #
 # RRTMGP library, module files
 #
