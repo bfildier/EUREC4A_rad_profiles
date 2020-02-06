@@ -2,6 +2,7 @@
 from pysolar.solar import *
 import datetime
 import argparse
+import pytz
 import xarray as xr
 import numpy as np
 import os
@@ -70,10 +71,15 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     #   value from the highest pressure/lowest level
     #
 
+    lat = sonde.lat[0]
+    lon = sonde.lon[0]
     
     date = datetime.datetime.strptime(str(sonde.time.values[0]).split('.')[0],'%Y-%m-%dT%H:%M:%S')
+    timezone = pytz.timezone("UTC")
+    date = timezone.localize(date)
     alt_sol = get_altitude(lat,lon, date)
-    cos_sza = np.sin(alt_sol*np.pi/180)  
+    conv_deg_rad = np.pi/180
+    cos_sza = np.sin(alt_sol*conv_deg_rad)  
 
     if(mu0 <= 0): 
         mu0 = 1.
@@ -102,8 +108,9 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     #
     lowest = back.p_lay.argmax()
     back_on_p = back.swap_dims({'lay':'p_lay'}).reset_coords() # Background sounding on pressure layers
+    back_on_p = back_on_p.rename({"p_lay":"play"})
     for g in ghgs:
-        profile[g] = back_on_p["vmr_" + g].interp(p_lay=play).fillna(back["vmr_" + g].isel(lay=lowest))
+        profile[g] = back_on_p["vmr_" + g].interp(play=play).fillna(back["vmr_" + g].isel(lay=lowest))
 
     back.close()
     sonde.close()
@@ -115,7 +122,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Builds a netCDF file suitable for computing radiative fluxes by merging a background sounding a sonde file from Aspen")
     parser.add_argument("--sonde_file", type=str, default="input/HALO/20200119/AVAPS_Dropsondes/processed/D20200119_161410_PQC.nc",
                         help="Name of sonde file")
-    parser.add_argument("--background_file", type=str, default='tropical-atmosphere.nc',
+    parser.add_argument("--background_file", type=str, default='../tropical-atmosphere.nc',
                         help="Directory where reference values are")
     parser.add_argument("--deltaP", type=int, default=100,
                         help="Pressure discretization of sonde (Pa, integer)")
