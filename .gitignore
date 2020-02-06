@@ -1,0 +1,5 @@
+code/*.o
+code/*.mod
+*ipynb_checkpoints*
+*Draft.ipynb
+*_rad.nc

@@ -11,11 +11,11 @@ rad_filename=${sonde_filename%*.nc}'_rad.nc'
 
 # Merge dropsonde profiles with standard atmosphere profiles
 echo 'merging sounding and reference profiles in new file '$rad_filename
-python compute-radiation-from-soundings.py --sonde_file ${sonde_path}/${sonde_filename}
+python combine_reference_and_sonde_profiles.py --sonde_file ${sonde_path}/${sonde_filename}
 
 # Compute radiative profles
 echo "compute radiative profiles and append them to ${rad_filename}" 
-../code/sounding_profile ${rad_filename}
+../code/sonde_radiation ${rad_filename}
 
-echo "move ${rad_filename} to ${sonde_path}"
-mv ${rad_filename} ${sonde_path}/
+#echo "move ${rad_filename} to ${sonde_path}"
+#mv ${rad_filename} ${sonde_path}/
