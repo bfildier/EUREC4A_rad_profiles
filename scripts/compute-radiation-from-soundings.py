@@ -2,6 +2,7 @@
 from pysolar.solar import *
 import datetime
 import argparse
+import pytz
 import xarray as xr
 import numpy as np
 import os
@@ -77,7 +78,8 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     timezone = pytz.timezone("UTC")
     date = timezone.localize(date)
     alt_sol = get_altitude(lat,lon, date)
-    cos_sza = np.sin(alt_sol*np.pi/180)  
+    conv_deg_rad = np.pi/180
+    cos_sza = np.sin(alt_sol*conv_deg_rad)  
 
     if(mu0 <= 0): 
         mu0 = 1.
