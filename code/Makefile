@@ -5,8 +5,8 @@ ifeq ($(USER),bfildier)
 endif
 ifeq ($(USER),ludo)
 	RRTMGP_ROOT = ../../rte-rrtmgp
-	NFHOME = /usr
-	NCHOME = /anaconda3
+	NFHOME = /usr/local
+	NCHOME = /usr/local
 endif
 
 # Location of RTE+RRTMGP libraries, module files.
