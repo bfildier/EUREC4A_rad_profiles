@@ -91,7 +91,7 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
 
     profile = xr.Dataset({"tlay"   :(["play"], temp), \
                           "play"   :(["play"], play), \
-                          "vmr_h2o":(["play"], h2o),  \
+                          "h2o":(["play"], h2o),  \
                           "plev"   :(["plev"], plev), \
                           "sfc_emis":([], sfc_emis),  \
                           "sfc_alb":([], sfc_alb ),  \

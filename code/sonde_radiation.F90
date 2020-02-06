@@ -47,7 +47,7 @@ program sonde_radiation
   !
   ! Default absorption coefficent files
   !
-  rrtmgp_dir     = "."
+  rrtmgp_dir     = "../../rte-rrtmgp/rrtmgp/data"
   lw_coeffs_file = "rrtmgp-data-lw-g256-2018-12-04.nc"
   sw_coeffs_file = "rrtmgp-data-sw-g224-2018-12-04.nc"
   print *, "Usage: sonde_radiation [rrtmgp_dir] [lw_coeffs_file] [sw_coeffs_file] "
@@ -68,11 +68,11 @@ program sonde_radiation
   if(get_dim_size(ncid, "plev") /= nlay+1) &
     call stop_on_err("sonde_radiation: layer and level dimensions in file inconsistent")
 
-  allocate(play(nlay, 1),  tlay(nlay, 1), plev(nlay+1, 1))
-  play(:,1) = read_field(ncid, "play", nlay)
-  tlay(:,1) = read_field(ncid, "tlay", nlay)
-  plev(:,1) = read_field(ncid, "plev", nlay+1)
-  top_at_1 = play(1, 1) < play(1, nlay)
+  allocate(play(1,nlay),  tlay(1,nlay), plev(1,nlay+1))
+  play(1,:) = read_field(ncid, "play", nlay)
+  tlay(1,:) = read_field(ncid, "tlay", nlay)
+  plev(1,:) = read_field(ncid, "plev", nlay+1)
+  top_at_1 = play(1, 1) < play(1,nlay)
 
   !
   ! Gas concentrations (volume mixing ratios) go in a type
