@@ -47,7 +47,7 @@ program sonde_radiation
   !
   ! Default absorption coefficent files
   !
-  rrtmgp_dir     = "../../rte-rrtmgp/rrtmgp/data"
+  rrtmgp_dir     = "../rte-rrtmgp/rrtmgp/data"
   lw_coeffs_file = "rrtmgp-data-lw-g256-2018-12-04.nc"
   sw_coeffs_file = "rrtmgp-data-sw-g224-2018-12-04.nc"
   print *, "Usage: sonde_radiation [rrtmgp_dir] [lw_coeffs_file] [sw_coeffs_file] "
