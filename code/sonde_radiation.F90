@@ -116,10 +116,9 @@ program sonde_radiation
   call stop_on_err(rte_lw(lw_optical_props,  top_at_1, &
                           lw_sources, sfc_emis,        &
                           fluxes, n_gauss_angles = 3))
-  print *, flux_dn
-  call stop_on_err(write_field(ncid, "lw_dn",  flux_dn))
-  call stop_on_err(write_field(ncid, "lw_up",  flux_up))
-  call stop_on_err(write_field(ncid, "lw_net", flux_net))
+  call stop_on_err(write_field(ncid, "lw_dn",  flux_dn (1,:)))
+  call stop_on_err(write_field(ncid, "lw_up",  flux_up (1,:)))
+  call stop_on_err(write_field(ncid, "lw_net", flux_net(1,:)))
 
   !
   ! Shortwave
@@ -143,9 +142,9 @@ program sonde_radiation
   call stop_on_err(rte_sw(sw_optical_props, top_at_1,      &
                           mu0, sw_toa, sfc_alb, sfc_alb, &
                           fluxes))
-  call stop_on_err(write_field(ncid, "sw_dn",  flux_dn))
-  call stop_on_err(write_field(ncid, "sw_up",  flux_up))
-  call stop_on_err(write_field(ncid, "sw_net", flux_net))
+  call stop_on_err(write_field(ncid, "sw_dn",  flux_dn (1,:)))
+  call stop_on_err(write_field(ncid, "sw_up",  flux_up (1,:)))
+  call stop_on_err(write_field(ncid, "sw_net", flux_net(1,:)))
 
   ncid = nf90_close(ncid)
 
