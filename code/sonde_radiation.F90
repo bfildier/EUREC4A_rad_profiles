@@ -50,7 +50,7 @@ program sonde_radiation
   rrtmgp_dir     = "../rte-rrtmgp/rrtmgp/data"
   lw_coeffs_file = "rrtmgp-data-lw-g256-2018-12-04.nc"
   sw_coeffs_file = "rrtmgp-data-sw-g224-2018-12-04.nc"
-  print *, "Usage: sonde_radiation [rrtmgp_dir] [lw_coeffs_file] [sw_coeffs_file] "
+  print *, "Usage: sonde_radiation combo_file [rrtmgp_dir] [lw_coeffs_file] [sw_coeffs_file] "
   nargs = command_argument_count()
   if(nargs < 1) call stop_on_err("sonde_radiation: have to specify at least which file you want radiation computed for")
   call get_command_argument(1, file_name)
@@ -100,9 +100,10 @@ program sonde_radiation
   ! Longwave
   !
   call load_and_init(gas_optics_lw, trim(rrtmgp_dir) // "/" // trim(lw_coeffs_file), gas_concs)
-  call stop_on_err(lw_sources%alloc(1, nlay, gas_optics_lw))
-  allocate(sfc_emis(1, gas_optics_lw%get_nband()))
-  sfc_emis(1,:) = read_field(ncid, "sfc_emis")
+  call stop_on_err(lw_sources%alloc           (1, nlay, gas_optics_lw))
+  call stop_on_err(lw_optical_props%alloc_1scl(1, nlay, gas_optics_lw))
+  allocate(sfc_emis(gas_optics_lw%get_nband(), 1))
+  sfc_emis(:,1) = read_field(ncid, "sfc_emis")
   !
   ! Gas optics
   !
@@ -115,6 +116,7 @@ program sonde_radiation
   call stop_on_err(rte_lw(lw_optical_props,  top_at_1, &
                           lw_sources, sfc_emis,        &
                           fluxes, n_gauss_angles = 3))
+  print *, flux_dn
   call stop_on_err(write_field(ncid, "lw_dn",  flux_dn))
   call stop_on_err(write_field(ncid, "lw_up",  flux_up))
   call stop_on_err(write_field(ncid, "lw_net", flux_net))
@@ -124,10 +126,11 @@ program sonde_radiation
   !
   call load_and_init(gas_optics_sw, trim(rrtmgp_dir) // "/" // trim(sw_coeffs_file), gas_concs)
   allocate(mu0(1), &
-           sfc_alb(1, gas_optics_sw%get_nband()), &
+           sfc_alb(gas_optics_sw%get_nband(), 1), &
            sw_toa(1, gas_optics_sw%get_ngpt()))
   sfc_alb(:,:) = read_field(ncid, "sfc_alb")
   mu0(:)       = read_field(ncid, "cos_sza")
+  call stop_on_err(sw_optical_props%alloc_2str(1, nlay, gas_optics_sw))
   !
   ! Gas optics
   !
