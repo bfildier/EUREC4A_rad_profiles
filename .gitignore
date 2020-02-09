@@ -1,0 +1,7 @@
+input/Data_local
+output
+*.mod
+*.o
+*ipynb_checkpoints*
+*_rad.nc
+*ferret*

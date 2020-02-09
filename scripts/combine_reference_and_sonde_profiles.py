@@ -39,82 +39,87 @@ def combine_sonde_and_background(sonde_file, background_file, deltaP=100, sfc_em
     sonde = xr.open_dataset(sonde_file).dropna(dim='time',subset=['time']). \
                                         swap_dims({'time':'pres'}).reset_coords(). \
                                         dropna(dim='pres',subset=['alt','pres','mr','tdry'],how='any')
+    
+    if (sonde.pres.values.size==0):
+        print("The sonde is empty ")
+        exit()
+    else:
     #
     # Units conversion
     #
-    sonde["pres"] = sonde.pres * PaTohPa       # hPa to Pa
-    sonde["mr"]   = sonde.mr * gtokg / epsilon # Mass to volume mixing ratio
-    sonde["tdry"] = sonde.tdry + CtoK          # C to K
-    
-    #
-    # Construct pressure grid: coarse where we have only the background sounding, changing abruptly to
-    #   the a grid from min to max pressure of the sondes.
-    #
-    play_switch = np.ceil(sonde.pres.min())
-    # Layer pressures from background sounding in increasing order
-    back_plays  = np.sort(back.p_lay.where(back.p_lay < play_switch).dropna(dim='lay'))
-    sonde_plays = np.arange(play_switch, sonde.pres.max(), deltaP)
-    play = np.append(back_plays, sonde_plays)
-    #
-    # Interface pressures: mostly the average of the two neighboring layer pressures
-    #
-    plev = np.append(np.append(back.p_lev.min(), 0.5 * (play[1:] + play[:-1])), play.max() + deltaP/2.)
+        sonde["pres"] = sonde.pres * PaTohPa       # hPa to Pa
+        sonde["mr"]   = sonde.mr * gtokg / epsilon # Mass to volume mixing ratio
+        sonde["tdry"] = sonde.tdry + CtoK          # C to K
 
-    #
-    # Interpolate values onto new grid
-    #
-    temp = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().t_lay.interp(p_lay=back_plays), \
-                     sonde.tdry.interp(pres=sonde_plays))
-    h2o  = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_h2o.interp(p_lay=back_plays), \
-                     sonde.mr.interp(pres=sonde_plays))
-    #
-    # Index with the greatest pressure - where pressures in the sonde are higher than any in the background, use the
-    #   value from the highest pressure/lowest level
-    #
+        #
+        # Construct pressure grid: coarse where we have only the background sounding, changing abruptly to
+        #   the a grid from min to max pressure of the sondes.
+        #
+        play_switch = np.ceil(sonde.pres.min())
+        # Layer pressures from background sounding in increasing order
+        back_plays  = np.sort(back.p_lay.where(back.p_lay < play_switch).dropna(dim='lay'))
+        sonde_plays = np.arange(play_switch, sonde.pres.max(), deltaP)
+        play = np.append(back_plays, sonde_plays)
+        #
+        # Interface pressures: mostly the average of the two neighboring layer pressures
+        #
+        plev = np.append(np.append(back.p_lev.min(), 0.5 * (play[1:] + play[:-1])), play.max() + deltaP/2.)
 
-    lat = sonde.lat[0]
-    lon = sonde.lon[0]
-    date = datetime.datetime.strptime(str(sonde.time.values[0]).split('.')[0],'%Y-%m-%dT%H:%M:%S')
-    timezone = pytz.timezone("UTC")
-    date = timezone.localize(date)
-    alt_sol = get_altitude(lat,lon, date)
-    conv_deg_rad = np.pi/180
-    cos_sza = np.sin(alt_sol*conv_deg_rad)  
+        #
+        # Interpolate values onto new grid
+        #
+        temp = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().t_lay.interp(p_lay=back_plays), \
+                         sonde.tdry.interp(pres=sonde_plays))
+        h2o  = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_h2o.interp(p_lay=back_plays), \
+                         sonde.mr.interp(pres=sonde_plays))
+        #
+        # Index with the greatest pressure - where pressures in the sonde are higher than any in the background, use the
+        #   value from the highest pressure/lowest level
+        #
 
-    if(mu0 <= 0): 
-        mu0 = 1.
-    else:
-        mu0 = cos_sza
-    
-    sfc_t = sonde.tdry.values[0]
-# replace with computation from sonde date, time, lat/lon
+        lat = sonde.lat[0]
+        lon = sonde.lon[0]
+        date = datetime.datetime.strptime(str(sonde.time.values[0]).split('.')[0],'%Y-%m-%dT%H:%M:%S')
+        timezone = pytz.timezone("UTC")
+        date = timezone.localize(date)
+        alt_sol = get_altitude(lat,lon, date)
+        conv_deg_rad = np.pi/180
+        cos_sza = np.sin(alt_sol*conv_deg_rad)  
 
-    profile = xr.Dataset({"tlay"   :(["play"], temp), \
-                          "play"   :(["play"], play), \
-                          "h2o":(["play"], h2o),  \
-                          "plev"   :(["plev"], plev), \
-                          "sfc_emis":([], sfc_emis),  \
-                          "sfc_alb":([], sfc_alb ),  \
-                          "sfc_t":([], sfc_t),  \
-                          "cos_sza":([], mu0),       \
-                          "lw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
-                          "lw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\
-                          "lw_net" :(["plev"], np.repeat(np.nan, plev.size)),\
-                          "sw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
-                          "sw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\
-                          "sw_net" :(["plev"], np.repeat(np.nan, plev.size))})
-    #
-    # Add the other greenhouse gases
-    #
-    lowest = back.p_lay.argmax()
-    back_on_p = back.swap_dims({'lay':'p_lay'}).reset_coords() # Background sounding on pressure layers
-    back_on_p = back_on_p.rename({'p_lay':'play'}) # Rename p_lay into play
-    for g in ghgs:
-        profile[g] = back_on_p["vmr_" + g].interp(play=play).fillna(back["vmr_" + g].isel(lay=lowest))
+        if(mu0 <= 0): 
+            mu0 = 1.
+        else:
+            mu0 = cos_sza
 
-    back.close()
-    sonde.close()
-    return(profile)
+        sfc_t = sonde.tdry.values[0]
+    # replace with computation from sonde date, time, lat/lon
+
+        profile = xr.Dataset({"tlay"   :(["play"], temp), \
+                              "play"   :(["play"], play), \
+                              "h2o":(["play"], h2o),  \
+                              "plev"   :(["plev"], plev), \
+                              "sfc_emis":([], sfc_emis),  \
+                              "sfc_alb":([], sfc_alb ),  \
+                              "sfc_t":([], sfc_t),  \
+                              "cos_sza":([], mu0),       \
+                              "lw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
+                              "lw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\
+                              "lw_net" :(["plev"], np.repeat(np.nan, plev.size)),\
+                              "sw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
+                              "sw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\
+                              "sw_net" :(["plev"], np.repeat(np.nan, plev.size))})
+        #
+        # Add the other greenhouse gases
+        #
+        lowest = back.p_lay.argmax()
+        back_on_p = back.swap_dims({'lay':'p_lay'}).reset_coords() # Background sounding on pressure layers
+        back_on_p = back_on_p.rename({'p_lay':'play'}) # Rename p_lay into play
+        for g in ghgs:
+            profile[g] = back_on_p["vmr_" + g].interp(play=play).fillna(back["vmr_" + g].isel(lay=lowest))
+
+        back.close()
+        sonde.close()
+        return(profile)
 
 # argparse variables: sonde_file, background_sounding_file, delta_p
 # values when run in repo root
@@ -132,11 +137,14 @@ if __name__ == '__main__':
                         help="Surface albedo (spectrally constant, same for direct and diffuse)")
     parser.add_argument("--cos_sza", type=float, default=0, dest="mu0",
                         help="Cosine of solar zenith angle, default is to compute from sonde file (someday)")
+    parser.add_argument("--out_dir", type=str, default="output",
+                        help="Directory where the output files should be saved")
     args = parser.parse_args()
 
     # Generalize this
-    output_dir      = '.'
-    output_file     = os.path.basename(args.sonde_file)[:-3] + "_rad.nc"
+    output_dir      = args.out_dir
+    output_file     = "HALO_" + os.path.basename(args.sonde_file)[:-3] + "_rrtmgp.nc"
+    print(output_file)
 
     # Any error checking on arguments?
 
