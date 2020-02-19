@@ -7,32 +7,35 @@
 
 daylist=(20200119 20200124 20200126 20200128 20200130 20200131 20200202 20200205 20200207)
 
+download='false'
+
+# Replace for your own input directory 
+idir=/Users/bfildier/Data/EUREC4A/aeris/eurec4a-data/AIRCRAFT
+if [ "$download" == 'true' ]; then
+	idir=${wdir}/input/Data_local/Measurements
+fi
+
 wdir=${PWD%/*}
-idir=${wdir}/input/Data_local/Measurements/HALO
 odir=${wdir}/output
 cdir=${wdir}/code
 sdir=${wdir}/scripts
+
+if [ "$download" == 'true' ]; then
+
+	wget -r -nH --no-parent --cut-dirs=3 -P ${idir} https://observations.ipsl.fr/aeris/eurec4a-data/AIRCRAFT/HALO/AVAP-DROPSONDES/2020/ 
+
+fi
 
 for iday in {0..8} ; do
 
 	day=${daylist[iday]} 
 	echo ${day}
-	idir_day=${idir}/${day}/AVAPS_Dropsondes
+	idir_day=${idir}/HALO/AVAP-DROPSONDES/${day:0:4}/RF??_${day}
 	odir_day=${odir}/${day}
-
-	mkdir -p $idir_day
-
-	if [ -z "$(ls -A ${idir_day})" ]; then
-		
-		cd ${idir_day}
-		rm -rf *		
-		smbget -R smb://nas.eurec4a.eu/EUREC4A/Measurements/HALO/${day}/AVAPS_Dropsondes -U eurec4a%eurec4a@EUREC4A
-	else
-		echo $idir_day" already exists"
-	fi
 
 	cd $sdir
 
+	# Creates file and combines sonde profile with standard atmosphere
 	for ifile in `ls ${idir_day}/*PQC.nc ${idir_day}/processed/*PQC.nc`; do 
 
 		filename=${ifile##*\/}	
@@ -45,6 +48,7 @@ for iday in {0..8} ; do
 		echo " "	
 	done
 
+	# Calculates radiative profiles
 	for ofile in `ls ${odir_day}/*.nc`; do
 		echo 'Compute radiation profile '$ofile
 		${cdir}/sonde_radiation $ofile

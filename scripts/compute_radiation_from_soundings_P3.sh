@@ -13,6 +13,8 @@ odir=${wdir}/output
 cdir=${wdir}/code
 sdir=${wdir}/scripts
 
+download='false'
+
 for iday in {0..0} ; do
 
 	day=${daylist[iday]} 
@@ -22,15 +24,19 @@ for iday in {0..0} ; do
 
 	mkdir -p $idir_day
 
-	if [ -z "$(ls -A ${idir_day})" ]; then
+	if [ "$download" == 'true' ]; then
 		
-		cd ${idir_day}
-#		rm -rf *
-		wget -nd -r -P $idir_day -A PQC.nc --no-parent "https://seb.noaa.gov/pub/flight/ASPEN_Data/$day/"		
-	else
-		echo $idir_day" already exists"
-	fi
+		if [ -z "$(ls -A ${idir_day})" ]; then
+			
+			cd ${idir_day}
+	#		rm -rf *
+			wget -nd -r -P $idir_day -A PQC.nc --no-parent "https://seb.noaa.gov/pub/flight/ASPEN_Data/$day/"		
+		else
+			echo $idir_day" already exists"
+		fi
 
+	fi
+	
 #	cd $sdir
 #
 #	for ifile in `ls ${idir_day}/*PQC.nc ${idir_day}/processed/*PQC.nc`; do 
