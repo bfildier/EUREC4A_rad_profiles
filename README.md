@@ -7,6 +7,7 @@ Where the profile for a standard tropical atmosphere is stored.
 
 ##Steps to run the script
 
+### 0. Add input/Data_local in .gitignore
 
 ### 1. Compile the radiation code
 
