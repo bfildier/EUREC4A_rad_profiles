@@ -1,13 +1,8 @@
 # EUREC4A Radiative profiles
 
-
-## input
-
-Where the profile for a standard tropical atmosphere is stored.
-
 ##Steps to run the script
 
-### 0. Add input/Data_local in .gitignore
+### 0. Add output/ in .gitignore
 
 ### 1. Compile the radiation code
 
@@ -24,4 +19,6 @@ Call make.
 
 ### 3. Run the script
 
-In script, call compute_radiation_from_soundings.sh [full path for the dropsonde netcdf file].
+In script, edit compute_radiation_from_soundings.sh with the path to your dropsonde file.
+Run compute_radiation_from_soundings.sh
+
