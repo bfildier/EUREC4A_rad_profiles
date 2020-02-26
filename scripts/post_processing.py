@@ -30,6 +30,8 @@ def concat(input_dir):
     for rad_path in all_rad_path:
 
         sonde = xr.open_dataset(rad_path)
+        print("")
+        print(rad_path)
         
         if (compute_q_rad == True):
             sonde = calculateMixingRatio(sonde)
@@ -61,6 +63,10 @@ def concat(input_dir):
             interp(zlev=np.arange(0,10005,10)).interp(zlay=np.arange(5,10000,10))    
 
             sonde = calculateQrad(sonde)
+            
+        else:
+            
+            sonde = sonde.interp(plev=np.arange(101500,50,-100)).interp(play=np.arange(101450,50,-100))
         
         all_rad_files.append(sonde)
 
