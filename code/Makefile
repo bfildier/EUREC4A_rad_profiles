@@ -1,5 +1,5 @@
 ifeq ($(USER),bfildier)
-	RRTMGP_ROOT = ../../rte-rrtmgp
+	RRTMGP_ROOT = ../rte-rrtmgp
 	NFHOME = /usr/local
 	NCHOME = /usr/local
 endif
