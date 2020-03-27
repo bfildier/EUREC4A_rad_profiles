@@ -58,11 +58,14 @@ def concat(input_dir):
 
             sonde["zlev"] = (["plev"],zlev)
             sonde["zlay"] = (["play"], zlay)
-
+                
+            sonde = calculateQrad(sonde)
+    
+                
             sonde = sonde.swap_dims({'play':'zlay'}).swap_dims({'plev':'zlev'}).\
             interp(zlev=np.arange(0,10005,10)).interp(zlay=np.arange(5,10000,10))    
 
-            sonde = calculateQrad(sonde)
+
             
         else:
             
@@ -97,22 +100,35 @@ def calculateQrad(sonde):
     play_size = len(sonde.play)
     
     flux = np.zeros(plev_size)
+    flux_lw = np.zeros(plev_size)
+    flux_sw = np.zeros(plev_size)
     delta_zlev = np.zeros(plev_size)
     
     q_rad = np.zeros(play_size)
+    q_rad_lw = np.zeros(play_size)
+    q_rad_sw = np.zeros(play_size)
     
     for k in range(plev_size):
-        flux[k] = sonde.lw_up[k] - sonde.lw_dn[k] + sonde.sw_up[k] - sonde.sw_dn[k]
+        flux_lw[k] = sonde.lw_up[k] - sonde.lw_dn[k]
+        flux_sw[k] = sonde.sw_up[k] - sonde.sw_dn[k]
+        flux[k] = flux_lw[k] + flux_sw[k]
         
     for k in range(plev_size-1):
         delta_zlev[k] = sonde.zlev[k+1] - sonde.zlev[k]
         
     for k in range(play_size):
-        q_rad[k] = 1/(sonde.rho[k]*c_p)*day_to_s*(flux[k+1]-flux[k])/delta_zlev[k]
+        q_rad_lw[k] = - 1/(sonde.rho[k]*c_p)*day_to_s*(flux_lw[k+1]-flux_lw[k])/delta_zlev[k]
+        q_rad_sw[k] = - 1/(sonde.rho[k]*c_p)*day_to_s*(flux_sw[k+1]-flux_sw[k])/delta_zlev[k]
+        q_rad[k] = - 1/(sonde.rho[k]*c_p)*day_to_s*(flux[k+1]-flux[k])/delta_zlev[k]
+
     
     sonde["q_rad"] = (("play"), q_rad)
+    sonde["q_rad_lw"] = (("play"), q_rad_lw)
+    sonde["q_rad_sw"] = (("play"), q_rad_sw)
     
     return sonde
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Concatenate all radiative profiles into one single file")
@@ -130,4 +146,4 @@ if __name__ == '__main__':
     compute_q_rad = args.comp_qrad
 
 all_rad_files = concat(input_dir)
-all_rad_files.to_netcdf(output_dir+"all_rad_profiles.nc")
+all_rad_files.to_netcdf(output_dir+"all_rad_profiles_radiosondes.nc")

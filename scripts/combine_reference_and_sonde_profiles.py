@@ -44,11 +44,11 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
     
     for i in range(number_sondes):
     
-        sonde = all_sondes.isel(launch_time = i).swap_dims({'alt':'pres'}).reset_coords().\
-                            dropna(dim='pres',subset=['alt','pres','mr','tdry'],how='any')
+        sonde = all_sondes.isel(launch_time = i).swap_dims({'gpsalt':'pres'}).reset_coords().\
+                            dropna(dim='pres',subset=['gpsalt','pres','mr','tdry'],how='any')
         
        
-        if (sonde.pres.values.size==0):
+        if (sonde.pres.values.size < 10):
             print("The sonde is empty ")
             sonde.close()
             
@@ -59,7 +59,16 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
             sonde["pres"] = sonde.pres * PaTohPa       # hPa to Pa
             sonde["mr"]   = sonde.mr * gtokg / epsilon # Mass to volume mixing ratio
             sonde["tdry"] = sonde.tdry + CtoK          # C to K
+    
+    
+            #only for radiosondes, otherwise comment following lines
+    
+            _,index = np.unique(sonde['pres'], return_index=True)
 
+            index = np.flip(index)
+       
+            sonde = sonde.isel(pres=index)
+                  
             #
             # Construct pressure grid: coarse where we have only the background sounding, changing abruptly to
             #   the a grid from min to max pressure of the sondes.
@@ -69,6 +78,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
             back_plays  = np.sort(back.p_lay.where(back.p_lay < play_switch).dropna(dim='lay'))
             sonde_plays = np.arange(play_switch, sonde.pres.max(), deltaP)
             play = np.append(back_plays, sonde_plays)
+            
             #
             # Interface pressures: mostly the average of the two neighboring layer pressures
             #
@@ -77,14 +87,16 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
             #
             # Interpolate values onto new grid
             #
+            
             temp = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().t_lay.interp(p_lay=back_plays), \
-                             sonde.tdry.interp(pres=sonde_plays))
+                         sonde.tdry.interp(pres=sonde_plays))
             h2o  = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_h2o.interp(p_lay=back_plays), \
-                             sonde.mr.interp(pres=sonde_plays))
-            #
-            # Index with the greatest pressure - where pressures in the sonde are higher than any in the background, use the
-            #   value from the highest pressure/lowest level
-            #
+                         sonde.mr.interp(pres=sonde_plays))
+
+        #
+        # Index with the greatest pressure - where pressures in the sonde are higher than any in the background, use the
+        #   value from the highest pressure/lowest level
+        #
 
             lat = sonde.lat[0]
             lon = sonde.lon[0]
@@ -104,7 +116,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
         # replace with computation from sonde date, time, lat/lon
 
             profile = xr.Dataset({"launch_time":([], sonde.launch_time),\
-                                  "Platform":([], sonde.Platform),
+                                  "platform":([], sonde.Platform),
                                   "tlay"   :(["play"], temp), \
                                   "play"   :(["play"], play), \
                                   "h2o":(["play"], h2o),  \
@@ -130,8 +142,9 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
 
             back.close()
             sonde.close()
-    
-            all_profiles.append(profile)                               
+
+            all_profiles.append(profile)    
+                
                                    
     return(all_profiles)
 
@@ -156,7 +169,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Generalize this
-    output_dir      = args.out_dir
+    output_dir  = args.out_dir
     
     # Any error checking on arguments?
 
@@ -165,7 +178,7 @@ if __name__ == '__main__':
     
     for profile in all_profiles:
             str_launch_time = str(profile.launch_time.values)[:-10]
-            Platform = str(profile.Platform.values)
+            Platform = str(profile.platform.values)
             output_file = Platform + "_" + str_launch_time+ "_rrtmgp.nc"
             print(output_file)
             profile.to_netcdf(os.path.join(output_dir, output_file))
