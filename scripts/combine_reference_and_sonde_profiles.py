@@ -43,9 +43,16 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
     number_sondes = len(all_sondes.launch_time)
     
     for i in range(number_sondes):
-    
-        sonde = all_sondes.isel(launch_time = i).swap_dims({'gpsalt':'pres'}).reset_coords().\
-                            dropna(dim='pres',subset=['gpsalt','pres','mr','tdry'],how='any')
+        
+        altvar = 'alt'
+        if altvar not in all_sondes.dims:
+            if 'gpsalt' in all_sondes.dims:
+                altvar = 'gpsalt'
+            else:
+                print("ERROR: dimension alt and gpsalt are unknown")
+
+        sonde = all_sondes.isel(launch_time = i).swap_dims({altvar:'pres'}).reset_coords().\
+                            dropna(dim='pres',subset=[altvar,'pres','mr','tdry'],how='any')
         
        
         if (sonde.pres.values.size < 10):
@@ -116,7 +123,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
         # replace with computation from sonde date, time, lat/lon
 
             profile = xr.Dataset({"launch_time":([], sonde.launch_time),\
-                                  "platform":([], sonde.Platform),
+                                  "platform":([], sonde.platform),
                                   "tlay"   :(["play"], temp), \
                                   "play"   :(["play"], play), \
                                   "h2o":(["play"], h2o),  \

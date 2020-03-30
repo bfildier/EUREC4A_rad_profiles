@@ -18,8 +18,10 @@ cdir=${wdir}/code
 #odir=${wdir}/output/rad_profiles_dropsondes
 
 #--- Ben
-ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_radiosondes.nc
-odir=${wdir}/output/rad_profiles_radiosondes
+#ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_radiosondes.nc
+#odir=${wdir}/output/rad_profiles_radiosondes
+ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_dropsondes.nc
+odir=${wdir}/output/rad_profiles_dropsondes
 
 mkdir -p ${odir}
 

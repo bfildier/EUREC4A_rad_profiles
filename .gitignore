@@ -6,3 +6,5 @@ output
 *_rad.nc
 *ferret*
 code/sonde_radiation
+.DS_Store
+input
