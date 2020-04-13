@@ -10,10 +10,17 @@ cdir=${wdir}/code
 
 # Replace with the path to your input file   
 
+#---- Ludo
+
 #ifile=/run/media/ludo/DATA/google-drive/Thèse/EUREC4a/github/Input/Radiosondes/all_radiosondes.nc
 #odir=${wdir}/output/rad_profiles_radiosondes
+#ifile=/run/media/ludo/DATA/google-drive/Thèse/EUREC4a/github/Input/Dropsondes/all_dropsondes.nc
+#odir=${wdir}/output/rad_profiles_dropsondes
 
-ifile=/run/media/ludo/DATA/google-drive/Thèse/EUREC4a/github/Input/Dropsondes/all_dropsondes.nc
+#--- Ben
+#ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_radiosondes.nc
+#odir=${wdir}/output/rad_profiles_radiosondes
+ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_dropsondes.nc
 odir=${wdir}/output/rad_profiles_dropsondes
 
 mkdir -p ${odir}
@@ -27,7 +34,7 @@ for ofile in `ls ${odir}/*.nc`; do
 done
 
 
-python post_processing.py --in_dir=${odir} --out_dir="../output/" --comp_qrad=False
+python post_processing.py --in_dir=${odir} --out_dir="../output/" --comp_qrad=True
 
 #To compute the radiative heating itself, run instead
 
