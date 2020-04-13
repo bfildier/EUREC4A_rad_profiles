@@ -1,4 +1,3 @@
-input/Data_local
 output
 *.mod
 *.o
@@ -6,3 +5,6 @@ output
 *_rad.nc
 *ferret*
 code/sonde_radiation
+dev/
+*Untitled*
+scripts/save
