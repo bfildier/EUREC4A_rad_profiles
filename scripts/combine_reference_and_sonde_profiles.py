@@ -121,15 +121,12 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             date_strg_SST = date.strftime("%Y-%m-%d")
             SST_path = os.path.join(SST_dir, "dataset-catsat-nrt-global-infrared-sst-hr-daily-" + date_strg_SST + ".nc")
             
-            print(date_strg_SST)
-            print(lat.values)
-            print(lon.values)
             SST_file = xr.open_dataset(SST_path)
             SST_file = SST_file["Grid_0001"]
             SST_file = SST_file.interpolate_na(dim="NbLongitudes")
             SST_file = SST_file.interpolate_na(dim="NbLatitudes")
 
-            SST_file = SST_file.sel(NbLatitudes = lat.values, method="nearest", drop=True)
+            SST_file = SST_file.sel(NbLatitudes = lat.values, method="nearest", drop=True).dropna(dim="NbLongitudes")
             SST_file = SST_file.sel(NbLongitudes = lon.values, method="nearest",drop=True)
 
             sfc_t = SST_file.values[0] + CtoK
