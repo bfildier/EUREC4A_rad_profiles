@@ -21,7 +21,7 @@ ghgs    = ["co2", "ch4", "n2o", "o3", "o2", "n2", "co"]
 # Need to add surface temperature for LW
 #
 
-def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, sfc_emis=.98, sfc_alb=0.07, mu0=1., ghgs=ghgs):
+def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, deltaP=100, sfc_emis=.98, sfc_alb=0.07, mu0=1., ghgs=ghgs):
     #
     # Maybe someone can show me how to use Python doc strings?
     #   This routine takes a single background sounding extracted from the Garand atmospheres distributed with RTE+RRTMGP
@@ -104,9 +104,8 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
         # Index with the greatest pressure - where pressures in the sonde are higher than any in the background, use the
         #   value from the highest pressure/lowest level
         #
-
-            lat = sonde.lat[0]
-            lon = sonde.lon[0]
+            lat = sonde.lat.dropna(dim="pres")[0]
+            lon = sonde.lon.dropna(dim="pres")[0]
             date = datetime.datetime.strptime(str(sonde.launch_time.values).split('.')[0],'%Y-%m-%dT%H:%M:%S')
             timezone = pytz.timezone("UTC")
             date = timezone.localize(date)
@@ -118,8 +117,23 @@ def combine_sonde_and_background(all_sondes_file, background_file, deltaP=100, s
                 mu0 = 0.
             else:
                 mu0 = cos_sza
+                
+            date_strg_SST = date.strftime("%Y-%m-%d")
+            SST_path = os.path.join(SST_dir, "dataset-catsat-nrt-global-infrared-sst-hr-daily-" + date_strg_SST + ".nc")
+            
+            print(date_strg_SST)
+            print(lat.values)
+            print(lon.values)
+            SST_file = xr.open_dataset(SST_path)
+            SST_file = SST_file["Grid_0001"]
+            SST_file = SST_file.interpolate_na(dim="NbLongitudes")
+            SST_file = SST_file.interpolate_na(dim="NbLatitudes")
 
-            sfc_t = sonde.tdry.values[0]
+            SST_file = SST_file.sel(NbLatitudes = lat.values, method="nearest", drop=True)
+            SST_file = SST_file.sel(NbLongitudes = lon.values, method="nearest",drop=True)
+
+            sfc_t = SST_file.values[0] + CtoK
+            print(sfc_t)
         # replace with computation from sonde date, time, lat/lon
 
             profile = xr.Dataset({"launch_time":([], sonde.launch_time),\
@@ -163,6 +177,8 @@ if __name__ == '__main__':
                         help="Name of sonde file")
     parser.add_argument("--background_file", type=str, default='../input/tropical-atmosphere.nc',
                         help="Directory where reference values are")
+    parser.add_argument("--SST_dir", type=str, default='../input/SST/',
+                        help="Directory where SST netcdf data are")
     parser.add_argument("--deltaP", type=int, default=100,
                         help="Pressure discretization of sonde (Pa, integer)")
     parser.add_argument("--sfc_emissivity", type=float, default=0.98, dest="emis",
@@ -178,14 +194,14 @@ if __name__ == '__main__':
     # Generalize this
     output_dir  = args.out_dir
     
-    # Any error checking on arguments?
-
-    all_profiles = combine_sonde_and_background(args.sonde_file, args.background_file, \
+    all_profiles = combine_sonde_and_background(args.sonde_file, args.background_file, args.SST_dir,\
                                            deltaP=args.deltaP, sfc_emis=args.emis, sfc_alb=args.alb, mu0=args.mu0)
     
+    i=0
     for profile in all_profiles:
-            str_launch_time = str(profile.launch_time.values)[:-10]
+          #  str_launch_time = str(profile.launch_time.values)[:-10]
             Platform = str(profile.platform.values)
-            output_file = Platform + "_" + str_launch_time+ "_rrtmgp.nc"
+            output_file = Platform + "_" + str(i)+ "_rrtmgp.nc"
             print(output_file)
             profile.to_netcdf(os.path.join(output_dir, output_file))
+            i+=1
