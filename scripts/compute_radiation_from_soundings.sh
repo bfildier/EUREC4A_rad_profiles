@@ -26,7 +26,7 @@ odir=${wdir}/output/rad_profiles
 mkdir -p ${odir}
 
 python combine_reference_and_sonde_profiles.py --sonde_file=${ifile} --out_dir=${odir}
-#
+
 for ofile in `ls ${odir}/*.nc`; do
               echo 'Compute radiation profile '$ofile
               ${cdir}/sonde_radiation $ofile

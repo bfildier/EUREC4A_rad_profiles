@@ -54,7 +54,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
     number_sondes = len(all_sondes.launch_time)
     
     for i in range(number_sondes):
-        
+   # for i in range(100,106):
 #To be deleted if it is not useful anymore
 #         altvar = 'alt'
 #         if altvar not in all_sondes.dims:
@@ -114,10 +114,11 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             #
             # Interpolate values onto new grid
             #
-                        
-            zlay = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().zlay.interp(p_lay=back_plays), \
-                       sonde.gpsalt.interp(pres=sonde_plays))
-                        
+            
+            back_zlay = back.swap_dims({'lay':'p_lay'}).reset_coords().zlay.interp(p_lay=back_plays)
+            back_zlay = back_zlay + sonde.gpsalt.max().values - back_zlay.min().values + 100
+            
+            zlay = np.append(back_zlay,sonde.gpsalt.interp(pres=sonde_plays))
             zlev = np.append(np.append(back.zlev.max(), 0.5*(zlay[1:] + zlay[:-1])), zlay.min() - deltaZ/2)
                                     
             temp = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().t_lay.interp(p_lay=back_plays), \
