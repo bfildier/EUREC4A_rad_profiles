@@ -54,7 +54,6 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
     number_sondes = len(all_sondes.launch_time)
     
     for i in range(number_sondes):
-        #for i in range(number_sondes):
         
 #To be deleted if it is not useful anymore
 #         altvar = 'alt'
@@ -70,7 +69,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
                                subset=["gpsalt", "pres","mr","tdry"],\
                                                    how="any")
         
-        if (sonde.gpsalt.values.size < 10 or sonde.gpsalt.min() > 100):
+        if (sonde.gpsalt.values.size < 10 or sonde.gpsalt.min() > 200):
             print("The sonde is empty ")
             sonde.close()            
             
@@ -115,7 +114,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             #
             # Interpolate values onto new grid
             #
-            
+                        
             zlay = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().zlay.interp(p_lay=back_plays), \
                        sonde.gpsalt.interp(pres=sonde_plays))
                         

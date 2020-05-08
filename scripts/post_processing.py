@@ -17,7 +17,7 @@ p_0 = 1.e5 #Pa
 kappa = 2/7 #Poisson constant
 c_p = 1005 #J/kg/K
 Ra = 286.9
-g = 10 #m.s^-2
+g = 9.8 #m.s^-2
 day_to_s = 86400 #s
 
 
@@ -83,18 +83,18 @@ def calculateQrad(sonde):
     flux = flux_lw[:] + flux_sw[:]  
       
     play_size = len(sonde.play)
-    delta_zlev = np.zeros(play_size)
+    delta_plev = np.zeros(play_size)
     for k in range(play_size):
-        delta_zlev[k] = sonde.zlev.values[k+1] - sonde.zlev.values[k]
+        delta_plev[k] = sonde.plev.values[k+1] - sonde.plev.values[k]
 
     q_rad = np.zeros(play_size)
     q_rad_lw = np.zeros(play_size)
     q_rad_sw = np.zeros(play_size)
         
     for k in range(play_size):  
-        q_rad_lw[k] = - 1/(sonde.rho[k]*c_p)*day_to_s*(flux_lw[k+1]-flux_lw[k])/delta_zlev[k]
-        q_rad_sw[k] = - 1/(sonde.rho[k]*c_p)*day_to_s*(flux_sw[k+1]-flux_sw[k])/delta_zlev[k]
-        q_rad[k] = - 1/(sonde.rho[k]*c_p)*day_to_s*(flux[k+1]-flux[k])/delta_zlev[k]
+        q_rad_lw[k] = 1/(c_p)*g*day_to_s*(flux_lw[k+1]-flux_lw[k])/delta_plev[k]
+        q_rad_sw[k] = 1/(c_p)*g*day_to_s*(flux_sw[k+1]-flux_sw[k])/delta_plev[k]
+        q_rad[k] = 1/(c_p)*day_to_s*(flux[k+1]-flux[k])/delta_plev[k]
 
     
     sonde["q_rad"] = (("play"), q_rad)
