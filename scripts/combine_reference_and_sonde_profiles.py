@@ -7,6 +7,8 @@ import xarray as xr
 import numpy as np
 import os
 import pytz
+from metpy import calc as mpcalc
+
 
 #
 # Constants - could use a module if that's better
@@ -16,7 +18,7 @@ epsilon = 0.6223 # Ratio of molar mass of water to dry air
 CtoK    = 273.15 # Celsius to Kelvin
 gtokg   = 1.e-3
 ghgs    = ["co2", "ch4", "n2o", "o3", "o2", "n2", "co"]
-
+deltaZ = 8.62                     #in m corresponding to deltaP=100Pa for T=25°C 
 #
 # Need to add surface temperature for LW
 #
@@ -31,6 +33,15 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
     # Background sounding
     #
     back = xr.open_dataset(background_file)
+    
+    back["p_lay"].attrs['units'] = 'Pa'
+    
+    back_zlay = mpcalc.pressure_to_height_std(back["p_lay"])
+    back["zlay"] = (["lay"] ,back_zlay.magnitude*1000)
+    
+    
+    back_zlev = mpcalc.pressure_to_height_std(back["p_lev"])
+    back["zlev"] = (["lev"] ,back_zlev.magnitude*1000)
     #
     # Parse the sonde, dropping levels at which any of
     #    temperature, water vapor mass mixing ratio, pressure, or altitude are missing
@@ -43,23 +54,33 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
     number_sondes = len(all_sondes.launch_time)
     
     for i in range(number_sondes):
+        #for i in range(number_sondes):
         
-        altvar = 'alt'
-        if altvar not in all_sondes.dims:
-            if 'gpsalt' in all_sondes.dims:
-                altvar = 'gpsalt'
-            else:
-                print("ERROR: dimension alt and gpsalt are unknown")
+#To be deleted if it is not useful anymore
+#         altvar = 'alt'
+#         if altvar not in all_sondes.dims:
+#             if 'gpsalt' in all_sondes.dims:
+#                 altvar = 'gpsalt'
+#             else:
+#                 print("ERROR: dimension alt and gpsalt are unknown")
 
-        sonde = all_sondes.isel(launch_time = i).swap_dims({altvar:'pres'}).reset_coords().\
-                            dropna(dim='pres',subset=[altvar,'pres','mr','tdry'],how='any')
+        altvar="gpsalt"
+
+        sonde = all_sondes.isel(launch_time = i).dropna(dim="gpsalt",\
+                               subset=["gpsalt", "pres","mr","tdry"],\
+                                                   how="any")
         
-       
-        if (sonde.pres.values.size < 10):
+        if (sonde.gpsalt.values.size < 10 or sonde.gpsalt.min() > 100):
             print("The sonde is empty ")
-            sonde.close()
+            sonde.close()            
             
         else:
+            
+            
+            #We get rid of z=0 due to interface issue
+          #  sonde = sonde.where(sonde.gpsalt > 0, drop = True)
+        
+            sonde = sonde.swap_dims({altvar:'pres'}).reset_coords()
         #
         # Units conversion
         #
@@ -95,8 +116,15 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             # Interpolate values onto new grid
             #
             
+            zlay = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().zlay.interp(p_lay=back_plays), \
+                       sonde.gpsalt.interp(pres=sonde_plays))
+                        
+            zlev = np.append(np.append(back.zlev.max(), 0.5*(zlay[1:] + zlay[:-1])), zlay.min() - deltaZ/2)
+                                    
             temp = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().t_lay.interp(p_lay=back_plays), \
                          sonde.tdry.interp(pres=sonde_plays))
+            
+            
             h2o  = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_h2o.interp(p_lay=back_plays), \
                          sonde.mr.interp(pres=sonde_plays))
 
@@ -106,62 +134,71 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
         #
             lat = sonde.lat.dropna(dim="pres")[0]
             lon = sonde.lon.dropna(dim="pres")[0]
-            date = datetime.datetime.strptime(str(sonde.launch_time.values).split('.')[0],'%Y-%m-%dT%H:%M:%S')
-            timezone = pytz.timezone("UTC")
-            date = timezone.localize(date)
-            alt_sol = get_altitude(lat,lon, date)
-            conv_deg_rad = np.pi/180
-            cos_sza = np.sin(alt_sol*conv_deg_rad)  
-
-            if(cos_sza <= 0): 
-                mu0 = 0.
-            else:
-                mu0 = cos_sza
-                
-            date_strg_SST = date.strftime("%Y-%m-%d")
-            SST_path = os.path.join(SST_dir, "dataset-catsat-nrt-global-infrared-sst-hr-daily-" + date_strg_SST + ".nc")
             
-            SST_file = xr.open_dataset(SST_path)
-            SST_file = SST_file["Grid_0001"]
-            SST_file = SST_file.interpolate_na(dim="NbLongitudes")
-            SST_file = SST_file.interpolate_na(dim="NbLatitudes")
+            if (lat > 20 or lat < 4 or lon < -65 or lon > -50):
+                print("outside SST bounds")
+                sonde.close()
+                
+            else:
+            
+                date = datetime.datetime.strptime(str(sonde.launch_time.values).split('.')[0],'%Y-%m-%dT%H:%M:%S')
+                timezone = pytz.timezone("UTC")
+                date = timezone.localize(date)
+                alt_sol = get_altitude(lat,lon, date)
+                conv_deg_rad = np.pi/180
+                cos_sza = np.sin(alt_sol*conv_deg_rad)  
 
-            SST_file = SST_file.sel(NbLatitudes = lat.values, method="nearest", drop=True).dropna(dim="NbLongitudes")
-            SST_file = SST_file.sel(NbLongitudes = lon.values, method="nearest",drop=True)
+                if(cos_sza <= 0): 
+                    mu0 = 0.
+                else:
+                    mu0 = cos_sza
 
-            sfc_t = SST_file.values[0] + CtoK
-            print(sfc_t)
-        # replace with computation from sonde date, time, lat/lon
+                date_strg_SST = date.strftime("%Y-%m-%d")
+                SST_path = os.path.join(SST_dir, "dataset-catsat-nrt-global-infrared-sst-hr-daily-" + date_strg_SST + ".nc")
 
-            profile = xr.Dataset({"launch_time":([], sonde.launch_time),\
-                                  "platform":([], sonde.platform),
-                                  "tlay"   :(["play"], temp), \
-                                  "play"   :(["play"], play), \
-                                  "h2o":(["play"], h2o),  \
-                                  "plev"   :(["plev"], plev), \
-                                  "sfc_emis":([], sfc_emis),  \
-                                  "sfc_alb":([], sfc_alb ),  \
-                                  "sfc_t":([], sfc_t),  \
-                                  "cos_sza":([], mu0),       \
-                                  "lw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
-                                  "lw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\
-                                  "lw_net" :(["plev"], np.repeat(np.nan, plev.size)),\
-                                  "sw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
-                                  "sw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\
-                                  "sw_net" :(["plev"], np.repeat(np.nan, plev.size))})
-            #
-            # Add the other greenhouse gases
-            #
-            lowest = back.p_lay.argmax()
-            back_on_p = back.swap_dims({'lay':'p_lay'}).reset_coords() # Background sounding on pressure layers
-            back_on_p = back_on_p.rename({'p_lay':'play'}) # Rename p_lay into play
-            for g in ghgs:
-                profile[g] = back_on_p["vmr_" + g].interp(play=play).fillna(back["vmr_" + g].isel(lay=lowest))
+                SST_file = xr.open_dataset(SST_path)
+                SST_file = SST_file["Grid_0001"]
+                SST_file = SST_file.interpolate_na(dim="NbLongitudes")
+                SST_file = SST_file.interpolate_na(dim="NbLatitudes")
 
-            back.close()
-            sonde.close()
+                SST_file = SST_file.sel(NbLatitudes = lat.values, method="nearest", drop=True).dropna(dim="NbLongitudes")
+                SST_file = SST_file.sel(NbLongitudes = lon.values, method="nearest",drop=True)
 
-            all_profiles.append(profile)    
+                sfc_t = SST_file.values[0] + CtoK
+
+           # replace with computation from sonde date, time, lat/lon
+
+                profile = xr.Dataset({"launch_time":([], sonde.launch_time),\
+                                      "platform":([], sonde.platform.values),
+                                      "tlay"   :(["play"], temp), \
+                                      "play"   :(["play"], play), \
+                                      "h2o":(["play"], h2o),  \
+                                      "zlay":(["play"], zlay),  \
+                                      "plev"   :(["plev"], plev), \
+                                      "zlev"   :(["plev"], zlev), \
+                                      "sfc_emis":([], sfc_emis),  \
+                                      "sfc_alb":([], sfc_alb ),  \
+                                      "sfc_t":([], sfc_t),  \
+                                      "cos_sza":([], mu0),  \
+                                      "lw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
+                                      "lw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\
+                                      "lw_net" :(["plev"], np.repeat(np.nan, plev.size)),\
+                                      "sw_dn"  :(["plev"], np.repeat(np.nan, plev.size)),\
+                                      "sw_up"  :(["plev"], np.repeat(np.nan, plev.size)),\
+                                      "sw_net" :(["plev"], np.repeat(np.nan, plev.size))})
+                #
+                # Add the other greenhouse gases
+                #
+                lowest = back.p_lay.argmax()
+                back_on_p = back.swap_dims({'lay':'p_lay'}).reset_coords() # Background sounding on pressure layers
+                back_on_p = back_on_p.rename({'p_lay':'play'}) # Rename p_lay into play
+                for g in ghgs:
+                    profile[g] = back_on_p["vmr_" + g].interp(play=play).fillna(back["vmr_" + g].isel(lay=lowest))
+
+                back.close()
+                sonde.close()
+
+                all_profiles.append(profile)    
                 
                                    
     return(all_profiles)

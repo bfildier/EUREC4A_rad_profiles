@@ -8,6 +8,7 @@ import datetime
 import metpy
 import argparse
 import pytz
+from metpy import calc as mpcalc
 
 #Constants
 
@@ -36,36 +37,12 @@ def concat(input_dir):
         if (compute_q_rad == True):
             sonde = calculateMixingRatio(sonde)
             sonde = calculateDensity(sonde)
-
-           #Calculate altitude of level using hydrostatic approximation
-
-            n_play = len(sonde["play"])
-            n_plev = len(sonde["plev"])
-
-            zlay = np.zeros(n_play)
-            zlev = np.zeros(n_plev)
-
-            zlev[n_plev-1] = 0
-
-            for k in range(n_plev-1,0,-1):
-                zlev[k-1] = zlev[k] +  1/(sonde.rho.values[k-1]*g)*(sonde.plev.values[k] - sonde.plev.values[k-1])
-
-            zlay[n_play-1] = 0.5*(zlev[n_plev-1] + zlev[n_plev-2])
-
-            for k in range(n_play-1,0,-1):
-                rho_lev = 0.5*(sonde.rho.values[k-1]+sonde.rho.values[k])
-                zlay[k-1] = zlay[k] + 1/(rho_lev*g)*(sonde.play.values[k] - sonde.play.values[k-1])
-
-            sonde["zlev"] = (["plev"],zlev)
-            sonde["zlay"] = (["play"], zlay)
-                
+            
             sonde = calculateQrad(sonde)
-    
                 
             sonde = sonde.swap_dims({'play':'zlay'}).swap_dims({'plev':'zlev'}).\
-            interp(zlev=np.arange(0,10005,10)).interp(zlay=np.arange(5,10000,10))    
-
-
+            interp(zlev=np.arange(0,10005,10)).interp(zlay=np.arange(5,10000,10)) 
+            
             
         else:
             
@@ -89,34 +66,32 @@ def calculateMixingRatio(all_sondes):
 def calculateDensity(sonde):
     
     #Formula rho=pres/RaT*(1+x)/(1+x*Rw/Ra)
+    
+    sonde["play"].attrs['units'] = 'Pa'
+    sonde["tlay"].attrs['units'] = 'K'
 
-    sonde = sonde.assign(rho=sonde["play"]/(Ra*sonde["tlay"])*(1+sonde["mr"])/
-                                                           (1+1.609*sonde["mr"]))    
+    rho = mpcalc.density(sonde["play"], sonde["tlay"], sonde["mr"])
+    
+    sonde ["rho"] = (["play"], rho.magnitude)
+                  
     return sonde
 
 def calculateQrad(sonde):
-    
-    plev_size = len(sonde.plev)
+        
+    flux_lw = sonde.lw_up[:] - sonde.lw_dn[:]
+    flux_sw = sonde.sw_up[:] - sonde.sw_dn[:]
+    flux = flux_lw[:] + flux_sw[:]  
+      
     play_size = len(sonde.play)
-    
-    flux = np.zeros(plev_size)
-    flux_lw = np.zeros(plev_size)
-    flux_sw = np.zeros(plev_size)
-    delta_zlev = np.zeros(plev_size)
-    
+    delta_zlev = np.zeros(play_size)
+    for k in range(play_size):
+        delta_zlev[k] = sonde.zlev.values[k+1] - sonde.zlev.values[k]
+
     q_rad = np.zeros(play_size)
     q_rad_lw = np.zeros(play_size)
     q_rad_sw = np.zeros(play_size)
-    
-    for k in range(plev_size):
-        flux_lw[k] = sonde.lw_up[k] - sonde.lw_dn[k]
-        flux_sw[k] = sonde.sw_up[k] - sonde.sw_dn[k]
-        flux[k] = flux_lw[k] + flux_sw[k]
         
-    for k in range(plev_size-1):
-        delta_zlev[k] = sonde.zlev[k+1] - sonde.zlev[k]
-        
-    for k in range(play_size):
+    for k in range(play_size):  
         q_rad_lw[k] = - 1/(sonde.rho[k]*c_p)*day_to_s*(flux_lw[k+1]-flux_lw[k])/delta_zlev[k]
         q_rad_sw[k] = - 1/(sonde.rho[k]*c_p)*day_to_s*(flux_sw[k+1]-flux_sw[k])/delta_zlev[k]
         q_rad[k] = - 1/(sonde.rho[k]*c_p)*day_to_s*(flux[k+1]-flux[k])/delta_zlev[k]
@@ -146,4 +121,4 @@ if __name__ == '__main__':
     compute_q_rad = args.comp_qrad
 
 all_rad_files = concat(input_dir)
-all_rad_files.to_netcdf(output_dir+"all_rad_profiles_radiosondes.nc")
+all_rad_files.to_netcdf(os.path.join(output_dir,"rad_profiles.nc"), mode="w")
