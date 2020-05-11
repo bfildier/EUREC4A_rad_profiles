@@ -94,7 +94,7 @@ def calculateQrad(sonde):
     for k in range(play_size):  
         q_rad_lw[k] = 1/(c_p)*g*day_to_s*(flux_lw[k+1]-flux_lw[k])/delta_plev[k]
         q_rad_sw[k] = 1/(c_p)*g*day_to_s*(flux_sw[k+1]-flux_sw[k])/delta_plev[k]
-        q_rad[k] = 1/(c_p)*day_to_s*(flux[k+1]-flux[k])/delta_plev[k]
+        q_rad[k] = 1/(c_p)*g*day_to_s*(flux[k+1]-flux[k])/delta_plev[k]
 
     
     sonde["q_rad"] = (("play"), q_rad)
