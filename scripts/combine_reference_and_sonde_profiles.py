@@ -38,8 +38,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
     
     back_zlay = mpcalc.pressure_to_height_std(back["p_lay"])
     back["zlay"] = (["lay"] ,back_zlay.magnitude*1000)
-    
-    
+        
     back_zlev = mpcalc.pressure_to_height_std(back["p_lev"])
     back["zlev"] = (["lev"] ,back_zlev.magnitude*1000)
     #
