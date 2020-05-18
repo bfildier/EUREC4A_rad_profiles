@@ -23,7 +23,7 @@ day_to_s = 86400 #s
 
 def concat(input_dir):
     
-    all_rad_path = glob.glob(os.path.join(input_dir,'*_rrtmgp.nc'))
+    all_rad_path = glob.glob(os.path.join(input_dir,'rrtmgp_*.nc'))
     all_rad_path.sort()
 
     all_rad_files = []

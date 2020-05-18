@@ -54,21 +54,18 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
     
     for i in range(number_sondes):
    # for i in range(100,106):
-#To be deleted if it is not useful anymore
-#         altvar = 'alt'
-#         if altvar not in all_sondes.dims:
-#             if 'gpsalt' in all_sondes.dims:
-#                 altvar = 'gpsalt'
-#             else:
-#                 print("ERROR: dimension alt and gpsalt are unknown")
 
-        altvar="gpsalt"
+        alt_var = "height"
+        p_var = 'pressure'
+        q_var = 'specific_humidity'
+        t_var = 'temperature'
+        rh_var = 'relative_humidity'
 
-        sonde = all_sondes.isel(launch_time = i).dropna(dim="gpsalt",\
-                               subset=["gpsalt", "pres","mr","tdry"],\
+        sonde = all_sondes.isel(launch_time = i).dropna(dim=alt_var,\
+                               subset=[alt_var, p_var,q_var,t_var],\
                                                    how="any")
         
-        if (sonde.gpsalt.values.size < 10 or sonde.gpsalt.min() > 200):
+        if (sonde[alt_var].values.size < 10 or sonde[alt_var].min() > 200):
             print("The sonde is empty ")
             sonde.close()            
             
@@ -78,31 +75,31 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             #We get rid of z=0 due to interface issue
           #  sonde = sonde.where(sonde.gpsalt > 0, drop = True)
         
-            sonde = sonde.swap_dims({altvar:'pres'}).reset_coords()
+            sonde = sonde.swap_dims({alt_var:p_var}).reset_coords()
         #
         # Units conversion
         #
-            sonde["pres"] = sonde.pres * PaTohPa       # hPa to Pa
-            sonde["mr"]   = sonde.mr * gtokg / epsilon # Mass to volume mixing ratio
-            sonde["tdry"] = sonde.tdry + CtoK          # C to K
+            sonde[p_var] = sonde[p_var] * PaTohPa       # hPa to Pa
+            sonde[q_var] = sonde[q_var] * gtokg / epsilon # Mass to volume mixing ratio
+            sonde[t_var] = sonde[t_var] + CtoK          # C to K
     
     
             #only for radiosondes, otherwise comment following lines
     
-            _,index = np.unique(sonde['pres'], return_index=True)
+            _,index = np.unique(sonde[p_var], return_index=True)
 
             index = np.flip(index)
        
-            sonde = sonde.isel(pres=index)
+            sonde = sonde.isel({p_var:index})
                   
             #
             # Construct pressure grid: coarse where we have only the background sounding, changing abruptly to
             #   the a grid from min to max pressure of the sondes.
             #
-            play_switch = np.ceil(sonde.pres.min())
+            play_switch = np.ceil(sonde[p_var].min())
             # Layer pressures from background sounding in increasing order
             back_plays  = np.sort(back.p_lay.where(back.p_lay < play_switch).dropna(dim='lay'))
-            sonde_plays = np.arange(play_switch, sonde.pres.max(), deltaP)
+            sonde_plays = np.arange(play_switch, sonde[p_var].max(), deltaP)
             play = np.append(back_plays, sonde_plays)
             
             #
@@ -115,24 +112,24 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             #
             
             back_zlay = back.swap_dims({'lay':'p_lay'}).reset_coords().zlay.interp(p_lay=back_plays)
-            back_zlay = back_zlay + sonde.gpsalt.max().values - back_zlay.min().values + 100
+            back_zlay = back_zlay + sonde[alt_var].max().values - back_zlay.min().values + 100
             
-            zlay = np.append(back_zlay,sonde.gpsalt.interp(pres=sonde_plays))
+            zlay = np.append(back_zlay,sonde[alt_var].interp({p_var:sonde_plays}))
             zlev = np.append(np.append(back.zlev.max(), 0.5*(zlay[1:] + zlay[:-1])), zlay.min() - deltaZ/2)
                                     
             temp = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().t_lay.interp(p_lay=back_plays), \
-                         sonde.tdry.interp(pres=sonde_plays))
+                         sonde[t_var].interp({p_var:sonde_plays}))
             
             
             h2o  = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().vmr_h2o.interp(p_lay=back_plays), \
-                         sonde.mr.interp(pres=sonde_plays))
+                         sonde[q_var].interp({p_var:sonde_plays}))
 
         #
         # Index with the greatest pressure - where pressures in the sonde are higher than any in the background, use the
         #   value from the highest pressure/lowest level
         #
-            lat = sonde.lat.dropna(dim="pres")[0]
-            lon = sonde.lon.dropna(dim="pres")[0]
+            lat = sonde.latitude.dropna(dim=p_var)[0]
+            lon = sonde.longitude.dropna(dim=p_var)[0]
             
             if (lat > 20 or lat < 4 or lon < -65 or lon > -50):
                 print("outside SST bounds")
@@ -168,7 +165,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
            # replace with computation from sonde date, time, lat/lon
 
                 profile = xr.Dataset({"launch_time":([], sonde.launch_time),\
-                                      "platform":([], sonde.platform.values),
+                                      "platform":([], sonde.Platform.values),
                                       "tlay"   :(["play"], temp), \
                                       "play"   :(["play"], play), \
                                       "h2o":(["play"], h2o),  \
@@ -222,6 +219,8 @@ if __name__ == '__main__':
                         help="Cosine of solar zenith angle, default is to compute from sonde file (someday)")
     parser.add_argument("--out_dir", type=str, default="../output/rad_profiles",
                         help="Directory where the output files should be saved")
+    parser.add_argument("--out_file", type=str, default=None,
+                        help="Output file name")
     args = parser.parse_args()
 
     # Generalize this
@@ -232,9 +231,9 @@ if __name__ == '__main__':
     
     i=0
     for profile in all_profiles:
-          #  str_launch_time = str(profile.launch_time.values)[:-10]
-            Platform = str(profile.platform.values)
-            output_file = Platform + "_" + str(i)+ "_rrtmgp.nc"
-            print(output_file)
-            profile.to_netcdf(os.path.join(output_dir, output_file))
-            i+=1
+        #  str_launch_time = str(profile.launch_time.values)[:-10]
+        Platform = str(profile.platform.values)
+        output_file = "rrtmgp_" + '{:>04}'.format(i)+ "_%s.nc"%Platform
+        print(output_file)
+        profile.to_netcdf(os.path.join(output_dir, output_file))
+        i+=1

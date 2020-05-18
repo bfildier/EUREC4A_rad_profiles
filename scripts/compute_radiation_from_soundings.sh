@@ -12,8 +12,8 @@ cdir=${wdir}/code
 
 #---- Ludo
 
-ifile=/run/media/ludo/DATA/google-drive/Thèse/EUREC4a/github/Input/all_sondes.nc
-odir=${wdir}/output/rad_profiles
+# ifile=/run/media/ludo/DATA/google-drive/Thèse/EUREC4a/github/Input/all_sondes.nc
+# odir=${wdir}/output/rad_profiles
 #ifile=/run/media/ludo/DATA/google-drive/Thèse/EUREC4a/github/Input/Dropsondes/all_dropsondes.nc
 #odir=${wdir}/output/rad_profiles_dropsondes
 
@@ -22,6 +22,8 @@ odir=${wdir}/output/rad_profiles
 #odir=${wdir}/output/rad_profiles_radiosondes
 #ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_dropsondes.nc
 #odir=${wdir}/output/rad_profiles_dropsondes
+ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/proxy_sondes_fixedT.nc
+odir=${wdir}/output/rad_profiles
 
 mkdir -p ${odir}
 
