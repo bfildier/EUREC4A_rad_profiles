@@ -22,7 +22,8 @@ cdir=${wdir}/code
 #odir=${wdir}/output/rad_profiles_radiosondes
 #ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_dropsondes.nc
 #odir=${wdir}/output/rad_profiles_dropsondes
-ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/proxy_sondes_fixedT.nc
+# ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_sondes.nc
+ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/proxy_sondes_fixedQ.nc
 odir=${wdir}/output/rad_profiles
 
 mkdir -p ${odir}
@@ -33,7 +34,7 @@ for ofile in `ls ${odir}/*.nc`; do
               echo 'Compute radiation profile '$ofile
               ${cdir}/sonde_radiation $ofile
               echo " "
-done
+    done
 
 python post_processing.py --in_dir=${odir} --out_dir=$odir --comp_qrad=True
 

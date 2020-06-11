@@ -117,7 +117,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             
             zlay = np.append(back_zlay,sonde[alt_var].interp({p_var:sonde_plays}))
             zlev = np.append(np.append(back.zlev.max(), 0.5*(zlay[1:] + zlay[:-1])), zlay.min() - deltaZ/2)
-                                    
+            
             temp = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().t_lay.interp(p_lay=back_plays), \
                          sonde[t_var].interp({p_var:sonde_plays}))
             
