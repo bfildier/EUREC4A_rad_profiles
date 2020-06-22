@@ -24,6 +24,7 @@ deltaZ = 8.62                     #in m corresponding to deltaP=100Pa for T=25°
 #
 
 def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, deltaP=100, sfc_emis=.98, sfc_alb=0.07, mu0=1., ghgs=ghgs):
+    
     #
     # Maybe someone can show me how to use Python doc strings?
     #   This routine takes a single background sounding extracted from the Garand atmospheres distributed with RTE+RRTMGP
@@ -53,7 +54,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
     number_sondes = len(all_sondes.launch_time)
     
     for i in range(number_sondes):
-   # for i in range(100,106):
+    #for i in range(100,106):
 
         alt_var = "height"
         p_var = 'pressure'
@@ -80,7 +81,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
         # Units conversion
         #
             sonde[p_var] = sonde[p_var] * PaTohPa       # hPa to Pa
-            sonde[q_var] = sonde[q_var] * gtokg / epsilon # Mass to volume mixing ratio
+            sonde[q_var] = sonde[q_var] / epsilon # Mass to volume mixing ratio
             sonde[t_var] = sonde[t_var] + CtoK          # C to K
     
     
@@ -113,6 +114,8 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             
             back_zlay = back.swap_dims({'lay':'p_lay'}).reset_coords().zlay.interp(p_lay=back_plays)
             back_zlay = back_zlay + sonde[alt_var].max().values - back_zlay.min().values + 100
+            
+            print(sonde[alt_var].max().values)
             
             zlay = np.append(back_zlay,sonde[alt_var].interp({p_var:sonde_plays}))
             zlev = np.append(np.append(back.zlev.max(), 0.5*(zlay[1:] + zlay[:-1])), zlay.min() - deltaZ/2)
