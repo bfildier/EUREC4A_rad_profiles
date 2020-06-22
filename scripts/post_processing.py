@@ -20,6 +20,15 @@ Ra = 286.9
 g = 9.8 #m.s^-2
 day_to_s = 86400 #s
 
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def concat(input_dir):
     
@@ -40,13 +49,14 @@ def concat(input_dir):
             
             sonde = calculateQrad(sonde)
                 
-            sonde = sonde.swap_dims({'play':'zlay'}).swap_dims({'plev':'zlev'}).\
-            interp(zlev=np.arange(0,10005,10)).interp(zlay=np.arange(5,10000,10)) 
-            
-            
+            if args.interp:
+                sonde = sonde.swap_dims({'play':'zlay'}).swap_dims({'plev':'zlev'})
+                sonde = sonde.interp(zlev=np.arange(0,10005,10)).interp(zlay=np.arange(5,10000,10)) 
+        
         else:
             
-            sonde = sonde.interp(plev=np.arange(101500,50,-100)).interp(play=np.arange(101450,50,-100))
+            if args.interp:
+                sonde = sonde.interp(plev=np.arange(101500,50,-100)).interp(play=np.arange(101450,50,-100))
         
         all_rad_files.append(sonde)
 
@@ -72,7 +82,7 @@ def calculateDensity(sonde):
 
     rho = mpcalc.density(sonde["play"], sonde["tlay"], sonde["mr"])
     
-    sonde ["rho"] = (["play"], rho.magnitude)
+    sonde["rho"] = (["play"], rho.magnitude)
                   
     return sonde
 
@@ -111,8 +121,12 @@ if __name__ == '__main__':
                         help="Directory where the profiles to concatenate are saved")
     parser.add_argument("--out_dir", type=str, default="../output/",
                         help="Directory where the output file should be saved")
-    parser.add_argument("--comp_qrad", type=bool, default=False,
+    parser.add_argument("--comp_qrad", type=str2bool, nargs='?',
+                        const=True, default=False,
                         help="to compute the radiative cooling for the sondes")
+    parser.add_argument("--interp",type=str2bool, nargs='?',
+                        const=True, default=True,
+                        help="interpolate on finer grid (default = True)")
     args = parser.parse_args()
 
     # Generalize this
@@ -120,5 +134,8 @@ if __name__ == '__main__':
     output_dir = args.out_dir
     compute_q_rad = args.comp_qrad
 
-all_rad_files = concat(input_dir)
-all_rad_files.to_netcdf(os.path.join(output_dir,"rad_profiles.nc"), mode="w")
+    print('comp_qrad =',args.comp_qrad)
+    print('interp =',args.interp)
+
+    all_rad_files = concat(input_dir)
+    all_rad_files.to_netcdf(os.path.join(output_dir,"rad_profiles.nc"), mode="w")

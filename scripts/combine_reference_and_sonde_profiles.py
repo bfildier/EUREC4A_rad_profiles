@@ -13,7 +13,7 @@ from metpy import calc as mpcalc
 #
 # Constants - could use a module if that's better
 #
-PaTohPa = 100.
+hPatoPa = 100.
 epsilon = 0.6223 # Ratio of molar mass of water to dry air
 CtoK    = 273.15 # Celsius to Kelvin
 gtokg   = 1.e-3
@@ -80,8 +80,9 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
         #
         # Units conversion
         #
-            sonde[p_var] = sonde[p_var] * PaTohPa       # hPa to Pa
-            sonde[q_var] = sonde[q_var] / epsilon # Mass to volume mixing ratio
+            sonde[p_var] = sonde[p_var] * hPatoPa       # hPa to Pa
+            # sonde[q_var] = sonde[q_var] * gtokg / epsilon # Mass to volume mixing ratio
+            sonde[q_var] = sonde[q_var]/(1-sonde[q_var]) / epsilon # specific humidity to volume mixing ratio
             sonde[t_var] = sonde[t_var] + CtoK          # C to K
     
     
@@ -119,7 +120,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             
             zlay = np.append(back_zlay,sonde[alt_var].interp({p_var:sonde_plays}))
             zlev = np.append(np.append(back.zlev.max(), 0.5*(zlay[1:] + zlay[:-1])), zlay.min() - deltaZ/2)
-                                    
+            
             temp = np.append(back.swap_dims({'lay':'p_lay'}).reset_coords().t_lay.interp(p_lay=back_plays), \
                          sonde[t_var].interp({p_var:sonde_plays}))
             
@@ -137,7 +138,7 @@ def combine_sonde_and_background(all_sondes_file, background_file, SST_dir, delt
             if (lat > 20 or lat < 4 or lon < -65 or lon > -50):
                 print("outside SST bounds")
                 sonde.close()
-                
+            
             else:
             
                 date = datetime.datetime.strptime(str(sonde.launch_time.values).split('.')[0],'%Y-%m-%dT%H:%M:%S')
