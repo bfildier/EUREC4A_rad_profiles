@@ -1,0 +1,8 @@
+dev/
+*Untitled*
+scripts/save/
+code/
+*ipynb*
+input/
+output/
+*.nc
