@@ -147,10 +147,10 @@ for i,sonde in zip(range(len(sondes_perturbed)),sondes_perturbed):
 #%%    # 4. run rrtmgp on mean profile and on perturbed profiles
 
 for i in range(2*Np+1):
-    
+
     name = 'rrtmgp_%s.nc'%('{:>04}'.format(i))
     print(name)
-    
+
     compute_rad_command = "cd %s; ./sonde_radiation %s"%(cdir,
                                                    os.path.join(odir_rad_profiles,name))
 
