@@ -1,0 +1,14 @@
+*/.ipynb_checkpoints/
+.ipynb_checkpoints/
+*/.DS_Store
+.DS_Store
+*/*/.DS_Store
+*/*/*/.DS_Store
+input/SST
+input
+*/*.mod
+*/*.o
+output/rad_profiles/
+output/20200*/*
+output/rad_profiles_dropsondes/
+output/rad_profiles_radiosondes/
