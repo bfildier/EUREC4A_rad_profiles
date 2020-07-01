@@ -26,18 +26,22 @@ ERAdir=/media/ludo/DATA/google-drive/Thèse/EUREC4a/github/Input/ERA
 # ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_sondes.nc
 #ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/proxy_sondes_fixedQ.nc
 #odir=${wdir}/output/rad_profiles
+#- combine with ERA
+ERAdir=/Users/bfildier/Data/EUREC4A/ERA
+ifile=/Users/bfildier/Data/EUREC4A/merged/sondes/all_sondes.nc
+odir=${wdir}/output/rad_profiles-test
 
 mkdir -p ${odir}
 
-python combine_reference_with_sonde_DRAFT.py --sonde_file=${ifile} --out_dir=${odir} --ERA_dir=${ERAdir}
+python combine_ERA_and_sonde_profiles.py --sonde_file=${ifile} --out_dir=${odir} --ERA_dir=${ERAdir}
 
-#for ofile in `ls ${odir}/*.nc`; do
-#              echo 'Compute radiation profile '$ofile
-#              ${cdir}/sonde_radiation $ofile
-#              echo " "
-#    done
-#
-#python post_processing.py --in_dir=${odir} --out_dir=$odir --comp_qrad=True
+for ofile in `ls ${odir}/*.nc`; do
+             echo 'Compute radiation profile '$ofile
+             ${cdir}/sonde_radiation $ofile
+             echo " "
+   done
+
+python post_processing.py --in_dir=${odir} --out_dir=$odir --comp_qrad=True
 
 #To compute the radiative heating itself, run instead
 

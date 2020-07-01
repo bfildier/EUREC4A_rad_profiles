@@ -40,8 +40,8 @@ def combine_sonde_and_background(all_sondes_file, background_file, ERA_dir, delt
     
     number_sondes = len(all_sondes.launch_time)
 
-#     for i in range(number_sondes):
-    for i in range(100,106):
+    for i in range(number_sondes):
+    # for i in range(100,106):
 
         alt_var = "height"
         p_var = 'pressure'
@@ -214,7 +214,6 @@ def combine_sonde_and_background(all_sondes_file, background_file, ERA_dir, delt
 
                 all_profiles.append(profile)    
                 
-                                   
     return(all_profiles)
 
 #functions to perform the interpolation
