@@ -33,7 +33,7 @@ odir=${wdir}/output/rad_profiles-test
 
 mkdir -p ${odir}
 
-python combine_ERA_and_sonde_profiles.py --sonde_file=${ifile} --out_dir=${odir} --ERA_dir=${ERAdir}
+# python combine_ERA_and_sonde_profiles.py --sonde_file=${ifile} --out_dir=${odir} --ERA_dir=${ERAdir}
 
 for ofile in `ls ${odir}/*.nc`; do
              echo 'Compute radiation profile '$ofile
