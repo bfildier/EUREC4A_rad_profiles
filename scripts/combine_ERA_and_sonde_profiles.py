@@ -48,18 +48,24 @@ def combine_sonde_and_background(all_sondes_file, background_file, ERA_dir, delt
         q_var = 'specific_humidity'
         t_var = 'temperature'
         #rh_var = 'relative_humidity'
-        
-        sonde = all_sondes.isel(launch_time = i).dropna(dim=alt_var,\
-                               subset=[alt_var, p_var,q_var,t_var],\
-                                                   how="any")
-        
+
         # minimum altitude to which radiosonde ascends, or from which dropsonde is released
         #maybe add these three arguments to arg parse
         size = 10
-        min_alt = 200
-        max_alt = 3000
+        min_alt = 40
+        # max_alt = 4000
+
+        # select sonde        
+        sonde = all_sondes.isel(launch_time = i)
+        # replace lowest values with nans
+        sonde[q_var].values[sonde[alt_var].values < min_alt] = np.nan
+        # drop nans
+        sonde = sonde.dropna(dim=alt_var,\
+                             subset=[alt_var, p_var,q_var,t_var],\
+                             how="any")
         
-        if (sonde[alt_var].values.size < size or sonde[alt_var].min() > min_alt or sonde[alt_var].max() < max_alt ):
+        # if (sonde[alt_var].values.size < size or sonde[alt_var].min() > min_alt or sonde[alt_var].max() < max_alt ):
+        if sonde[alt_var].values.size < size:
             print("The sonde is empty ")
             sonde.close()            
             
@@ -182,7 +188,9 @@ def combine_sonde_and_background(all_sondes_file, background_file, ERA_dir, delt
                 h2o = np.append(ERA5_interp.q.values, sonde[q_var].interp({p_var:sonde_plays}))
 
                 profile = xr.Dataset({"launch_time":([], sonde.launch_time),\
-                                      "platform":([], sonde.Platform.values),
+                                      "platform":([], sonde.Platform.values),\
+                                      "z_min":([],sonde[alt_var].min().values),\
+                                      "z_max":([],sonde[alt_var].max().values),\
                                       "tlay"   :(["play"], temp), \
                                       "play"   :(["play"], play), \
                                       "h2o":(["play"], h2o),  \
