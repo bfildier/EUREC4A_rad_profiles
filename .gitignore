@@ -8,14 +8,11 @@ input/SST
 input
 */*.mod
 */*.o
-output/rad_profiles/
-output/20200*/*
-output/rad_profiles_dropsondes/
-output/rad_profiles_radiosondes/
 dev/
 *Untitled*
 scripts/save/
 code/
 *ipynb*
 output/
+!output/*/rad_profiles.nc
 *.nc
