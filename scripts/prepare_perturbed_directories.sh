@@ -4,7 +4,8 @@
 ERAdir=/Users/bfildier/Data/EUREC4A/ERA/
 sondedir=/Users/bfildier/Data/EUREC4A/merged/sondes/
 currentdir=/Users/bfildier/Code/analyses/EUREC4A/EUREC4A_rad_profiles/scripts/
-subdirs='baseline ERA_SST_m021K ERA_SST_p021K ERA_q_m30pct ERA_q_p30pct sondes_q_m3pct sondes_q_p3pct'
+#subdirs='baseline ERA_SST_m021K ERA_SST_p021K ERA_q_m30pct ERA_q_p30pct sondes_q_m3pct sondes_q_p3pct'
+subdirs='ERA_SST_m042K ERA_SST_p042K'
 
 
 ## Create directory tree
@@ -41,6 +42,16 @@ ln -s ${ERAdir}/SST_2020_01_02_ERA5_hourly_Barbados_m021K.nc SST_2020_01_02_ERA5
 cd ${currentdir}/../input/perturbations/ERA_SST_p021K
 rm SST_2020_01_02_ERA5_hourly_Barbados.nc
 ln -s ${ERAdir}/SST_2020_01_02_ERA5_hourly_Barbados_p021K.nc SST_2020_01_02_ERA5_hourly_Barbados.nc
+
+# SST lower
+cd ${currentdir}/../input/perturbations/ERA_SST_m042K
+rm SST_2020_01_02_ERA5_hourly_Barbados.nc
+ln -s ${ERAdir}/SST_2020_01_02_ERA5_hourly_Barbados_m042K.nc SST_2020_01_02_ERA5_hourly_Barbados.nc
+
+# SST upper
+cd ${currentdir}/../input/perturbations/ERA_SST_p042K
+rm SST_2020_01_02_ERA5_hourly_Barbados.nc
+ln -s ${ERAdir}/SST_2020_01_02_ERA5_hourly_Barbados_p042K.nc SST_2020_01_02_ERA5_hourly_Barbados.nc
 
 # ERA q lower
 cd ${currentdir}/../input/perturbations/ERA_q_m30pct
